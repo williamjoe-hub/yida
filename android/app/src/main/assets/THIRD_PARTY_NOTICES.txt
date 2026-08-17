@@ -1,0 +1,9 @@
+U-2-Netp model
+Copyright (c) Xuebin Qin and contributors
+Licensed under the Apache License, Version 2.0.
+Source: https://github.com/xuebinqin/U-2-Net
+
+ONNX Runtime
+Copyright (c) Microsoft Corporation
+Licensed under the MIT License.
+Source: https://github.com/microsoft/onnxruntime
