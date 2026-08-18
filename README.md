@@ -19,6 +19,7 @@
 - Dart 3.x
 - Android SDK
 - JDK 17
+- 仅支持 ARM64（`arm64-v8a`）安卓设备
 
 ## 本地运行
 
