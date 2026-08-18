@@ -64,12 +64,6 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
-    - assets/mannequin_base.png
-    - assets/mannequin_friendly.png
-    - assets/mannequin_male.png
-    - assets/mannequin_friendly_v2.png
-    - assets/mannequin_male_v2.png
-    - assets/products/
     - assets/catalog/
 
   # To add assets to your application, add an assets section, like this:
