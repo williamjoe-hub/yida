@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:dressfit_app/models.dart';
 import 'package:dressfit_app/outfit_recommendation_service.dart';
 import 'package:dressfit_app/profile_settings.dart';
+import 'package:dressfit_app/weather_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -62,6 +63,55 @@ void main() {
       OutfitRecommendationService.forSeason(
         OutfitSeason.summer,
       ).every((outfit) => !outfit.shoes!.style.name.contains('短靴')),
+      isTrue,
+    );
+  });
+
+  test('hot weather only returns lightweight outfits', () {
+    const weather = WeatherSnapshot(
+      temperature: 31,
+      apparentTemperature: 34,
+      weatherCode: 0,
+      isDay: true,
+      rainProbability: 0,
+    );
+    final outfits = OutfitRecommendationService.forWeather(
+      weather,
+      gender: UserGender.female,
+      preferredSeason: OutfitSeason.winter,
+    );
+    expect(outfits, isNotEmpty);
+    expect(
+      outfits.every(
+        (outfit) =>
+            !RegExp(r'羽绒|大衣|抓绒|高领|毛衣|针织').hasMatch(outfit.top!.style.name) &&
+            !outfit.shoes!.style.name.contains('短靴'),
+      ),
+      isTrue,
+    );
+  });
+
+  test('cold rainy weather excludes exposed and rain-sensitive pieces', () {
+    const weather = WeatherSnapshot(
+      temperature: 8,
+      apparentTemperature: 5,
+      weatherCode: 61,
+      isDay: true,
+      rainProbability: 80,
+    );
+    final outfits = OutfitRecommendationService.forWeather(
+      weather,
+      gender: UserGender.male,
+    );
+    expect(outfits, isNotEmpty);
+    expect(
+      outfits.every(
+        (outfit) =>
+            !RegExp(r'短裤|短裙|亚麻').hasMatch(outfit.bottom!.style.name) &&
+            !outfit.shoes!.style.name.contains('凉鞋') &&
+            outfit.shoes!.style.material != GarmentMaterial.suede &&
+            outfit.shoes!.style.material != GarmentMaterial.canvas,
+      ),
       isTrue,
     );
   });

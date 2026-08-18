@@ -763,7 +763,11 @@ class _RecommendView extends StatelessWidget {
     final effectiveSeason =
         selectedSeason ?? OutfitRecommendationService.currentSeason(weather);
     final systemSuggestions = [
-      ...OutfitRecommendationService.forSeason(effectiveSeason, gender: gender),
+      ...OutfitRecommendationService.forWeather(
+        weather,
+        gender: gender,
+        preferredSeason: effectiveSeason,
+      ),
     ];
     final trendText = trends.map((item) => item.title).join(' ');
     void prioritizeWhere(bool Function(Outfit value) test) {
@@ -811,6 +815,7 @@ class _RecommendView extends StatelessWidget {
         systemOutfits: systemSuggestions,
         season: effectiveSeason,
         gender: gender,
+        weather: weather,
       ),
     };
     final mineIsEmpty =

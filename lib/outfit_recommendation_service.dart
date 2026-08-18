@@ -27,11 +27,11 @@ class OutfitRecommendationService {
   static final Map<(OutfitSeason, UserGender), List<Outfit>> _cache = {};
 
   static OutfitSeason currentSeason(WeatherSnapshot? weather) {
-    final temperature = weather?.temperature;
+    final temperature = weather?.apparentTemperature;
     if (temperature != null) {
-      if (temperature <= 9) return OutfitSeason.winter;
-      if (temperature >= 27) return OutfitSeason.summer;
-      if (temperature <= 18) {
+      if (temperature <= 12) return OutfitSeason.winter;
+      if (temperature >= 25) return OutfitSeason.summer;
+      if (temperature <= 24) {
         return DateTime.now().month <= 5
             ? OutfitSeason.spring
             : OutfitSeason.autumn;
@@ -49,6 +49,27 @@ class OutfitRecommendationService {
     OutfitSeason season, {
     UserGender gender = UserGender.male,
   }) => _cache.putIfAbsent((season, gender), () => _generate(season, gender));
+
+  /// Returns only combinations that suit the user's local feels-like
+  /// temperature. The preferred season affects ordering, never safety.
+  static List<Outfit> forWeather(
+    WeatherSnapshot? weather, {
+    required UserGender gender,
+    OutfitSeason? preferredSeason,
+  }) {
+    final season = preferredSeason ?? currentSeason(weather);
+    if (weather == null) return forSeason(season, gender: gender);
+    final seasons = [
+      season,
+      ...OutfitSeason.values.where((value) => value != season),
+    ];
+    final seen = <String>{};
+    return seasons
+        .expand((value) => forSeason(value, gender: gender))
+        .where((outfit) => _outfitFitsWeather(outfit, weather))
+        .where((outfit) => seen.add(outfit.pieces.map((e) => e?.id).join('|')))
+        .toList(growable: false);
+  }
 
   static int totalCount(UserGender gender) => OutfitSeason.values.fold(
     0,
@@ -97,11 +118,16 @@ class OutfitRecommendationService {
     required List<Outfit> systemOutfits,
     required OutfitSeason season,
     required UserGender gender,
+    WeatherSnapshot? weather,
     int count = 24,
   }) {
     if (userItems.isEmpty || systemOutfits.isEmpty) return [];
     final usable = userItems
-        .where((item) => _itemFits(item, season, gender))
+        .where(
+          (item) =>
+              _itemFits(item, season, gender) &&
+              (weather == null || _itemFitsWeather(item, weather)),
+        )
         .toList(growable: false);
     if (usable.isEmpty) return [];
     final grouped = <ClothingCategory, List<ClothingItem>>{
@@ -176,6 +202,56 @@ class OutfitRecommendationService {
     ClothingCategory.bottom => _bottomFits(item, season, gender),
     ClothingCategory.shoes => _shoeFits(item, season),
   };
+
+  static bool _outfitFitsWeather(Outfit outfit, WeatherSnapshot weather) =>
+      outfit.pieces.whereType<ClothingItem>().every(
+        (item) => _itemFitsWeather(item, weather),
+      );
+
+  static bool _itemFitsWeather(ClothingItem item, WeatherSnapshot weather) {
+    final feelsLike = weather.apparentTemperature;
+    final name = item.style.name;
+    final material = item.style.material;
+
+    if (weather.rainExpected) {
+      if (material == GarmentMaterial.suede) return false;
+      if (item.category == ClothingCategory.shoes &&
+          (material == GarmentMaterial.canvas || name.contains('凉鞋'))) {
+        return false;
+      }
+    }
+
+    return switch (item.category) {
+      ClothingCategory.hat => feelsLike >= 25
+          ? !RegExp(r'针织帽|贝雷帽|报童帽').hasMatch(name)
+          : feelsLike <= 12
+          ? !RegExp(r'空顶帽|网眼帽').hasMatch(name)
+          : !name.contains('空顶帽'),
+      ClothingCategory.top => feelsLike <= 5
+          ? RegExp(r'羽绒|大衣|抓绒|高领|毛衣|针织|风衣').hasMatch(name)
+          : feelsLike <= 12
+          ? RegExp(r'卫衣|毛衣|针织|高领|羽绒|大衣|抓绒|风衣|夹克|外套').hasMatch(name)
+          : feelsLike <= 18
+          ? RegExp(r'衬衫|卫衣|毛衣|针织|夹克|西装|外套|风衣|抓绒').hasMatch(name)
+          : feelsLike <= 24
+          ? !RegExp(r'背心|羽绒|大衣|抓绒|高领').hasMatch(name)
+          : feelsLike <= 29
+          ? RegExp(r'T恤|背心|Polo|亚麻衬衫|牛津衬衫|亨利领|球衣|垂感衬衫').hasMatch(name)
+          : RegExp(r'T恤|背心|Polo|亚麻衬衫|球衣|垂感衬衫').hasMatch(name),
+      ClothingCategory.bottom => feelsLike <= 12
+          ? !RegExp(r'短裤|短裙|亚麻|连体裤').hasMatch(name)
+          : feelsLike <= 18
+          ? !RegExp(r'短裤|短裙').hasMatch(name)
+          : feelsLike >= 30
+          ? RegExp(r'短裤|裙|亚麻长裤|阔腿西裤|连体裤').hasMatch(name)
+          : true,
+      ClothingCategory.shoes => feelsLike <= 18
+          ? !name.contains('凉鞋')
+          : feelsLike >= 25
+          ? !name.contains('短靴')
+          : true,
+    };
+  }
 
   static List<Outfit> _generate(OutfitSeason season, UserGender gender) {
     final hats = _items(
