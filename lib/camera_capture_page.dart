@@ -36,18 +36,7 @@ class _GarmentCameraPageState extends State<GarmentCameraPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _warmUpOfflineModel();
     _start();
-  }
-
-  Future<void> _warmUpOfflineModel() async {
-    try {
-      final ready = await _processor.invokeMethod<bool>('prepareModel');
-      debugPrint('Offline garment model ready: $ready');
-    } catch (exception) {
-      // Actual processing still reports a visible error if local initialization fails.
-      debugPrint('Offline garment model warm-up failed: $exception');
-    }
   }
 
   Future<void> _start() async {

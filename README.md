@@ -100,7 +100,9 @@ flutter build apk --release --target-platform android-arm64
 
 构建结果位于 `build/app/outputs/flutter-apk/`。
 
-> 仓库当前为了本地测试，release 构建仍使用调试签名。公开发布前请创建自己的 Android keystore，并替换 `android/app/build.gradle.kts` 中的签名配置。
+Release 构建从 `android/key.properties` 读取正式签名配置。签名文件和口令不会提交仓库；首次构建前请在本机准备自己的 keystore 和 `key.properties`。
+
+> ONNX Runtime 通过 JNI 按原始类名查找 Java 类型。Release 构建必须保留 `android/app/proguard-rules.pro` 中的 ONNX 规则，否则经过 R8 混淆后可能在 Android 16 上触发原生崩溃。
 
 ## 数据与隐私
 
